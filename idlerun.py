@@ -9,6 +9,7 @@ from optparse import OptionParser
 
 cpu_mask = re.compile('cpu\d+')
 
+# user=0, nice=1, system=2, idle=3, iowait=4, irq=5, softirq=6
 IDLE_FIELD = 3
 
 def stat():
@@ -16,16 +17,10 @@ def stat():
 	with open('/proc/stat', 'r') as f:
 		for l in f:
 			fields = l.split()
-			if len(fields) < 5:
-				continue
-			# cpu# user nice system idle iowait irq softirq
-			cpu_name = fields[0]
-			if not cpu_mask.match(cpu_name):
-				continue
-
-			times = map(float, fields[1:])
-			total_times = sum(times)
-			yield (cpu_name, times)
+			if len(fields) > 1:
+				cpu_name = fields[0]
+				if  cpu_mask.match(cpu_name):
+					yield cpu_name, map(float, fields[1:])
 
 def dict_diff(a, b):
 	''' returns the difference of the values by key '''
@@ -79,8 +74,8 @@ if __name__ == '__main__':
 	if len(args) < 1:
 		parser.error('Please supply a command (with options) to run in case of alarm. See --help')
 
-	if opt.interval <= 0:
-		parser.error('Please use an interval > 0')
+	if opt.interval < 1:
+		parser.error('Please use an interval >= 1')
 
 	if opt.low >= opt.high:
 		parser.error('Low threshold should be lower than alarm threshold')
